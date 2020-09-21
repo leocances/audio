@@ -44,35 +44,56 @@ class SPEECHCOMMANDS(Dataset):
     def __init__(self,
                  root: str,
                  url: str = URL,
-                 folder_in_archive: str = FOLDER_IN_ARCHIVE,
                  download: bool = False) -> None:
-        if url in [
-            "speech_commands_v0.01",
-            "speech_commands_v0.02",
-        ]:
+
+        if url in ["speech_commands_v0.01", "speech_commands_v0.02" ]:
             base_url = "https://storage.googleapis.com/download.tensorflow.org/data/"
             ext_archive = ".tar.gz"
 
             url = os.path.join(base_url, url + ext_archive)
 
-        basename = os.path.basename(url)
-        archive = os.path.join(root, basename)
+        self.root = root
+        self.url = url
 
-        basename = basename.rsplit(".", 2)[0]
-        folder_in_archive = os.path.join(folder_in_archive, basename)
+        self.basename = os.path.basename(url)
+
+        basename = self.basename.rsplit(".", 2)[0]
+        folder_in_archive = os.path.join(FOLDER_IN_ARCHIVE, basename)
 
         self._path = os.path.join(root, folder_in_archive)
+        print(self._path)
 
         if download:
-            if not os.path.isdir(self._path):
-                if not os.path.isfile(archive):
-                    checksum = _CHECKSUMS.get(url, None)
-                    download_url(url, root, hash_value=checksum, hash_type="md5")
-                extract_archive(archive, self._path)
+            self._download()
 
         walker = walk_files(self._path, suffix=".wav", prefix=True)
         walker = filter(lambda w: HASH_DIVIDER in w and EXCEPT_FOLDER not in w, walker)
         self._walker = list(walker)
+
+    def _download(self) -> None:
+        """Download the dataset and extract the archive"""
+        archive_path = os.path.join(self.root, self.basename)
+
+        if self._check_integrity(self._path):
+            print("Dataset already download and verified")
+
+        else:
+
+            checksum = _CHECKSUMS.get(self.url, None)
+            download_url(self.url, self.root, hash_value=checksum, hash_type="md5")
+            extract_archive(archive_path, self._path)
+
+    def _check_integrity(self, path, checksum=None) -> bool:
+        """Check if the dataset already exist and if yes, if it is not corrupted.
+
+        Returns:
+            bool: False if the dataset doesn't exist of it is corrupted.
+        """
+        if not os.path.isdir(path):
+            return False
+
+        # TODO add checksum verification
+        return True
 
     def __getitem__(self, n: int) -> Tuple[Tensor, int, str, str, int]:
         fileid = self._walker[n]
