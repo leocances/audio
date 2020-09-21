@@ -22,19 +22,6 @@ _CHECKSUMS = {
 }
 
 
-def load_speechcommands_item(filepath: str, path: str) -> Tuple[Tensor, int, str, str, int]:
-    relpath = os.path.relpath(filepath, path)
-    label, filename = os.path.split(relpath)
-    speaker, _ = os.path.splitext(filename)
-
-    speaker_id, utterance_number = speaker.split(HASH_DIVIDER)
-    utterance_number = int(utterance_number)
-
-    # Load audio
-    waveform, sample_rate = torchaudio.load(filepath)
-    return waveform, sample_rate, label, speaker_id, utterance_number
-
-
 class SPEECHCOMMANDS(Dataset):
     """
     Create a Dataset for Speech Commands. Each item is a tuple of the form:
@@ -97,7 +84,20 @@ class SPEECHCOMMANDS(Dataset):
 
     def __getitem__(self, n: int) -> Tuple[Tensor, int, str, str, int]:
         fileid = self._walker[n]
-        return load_speechcommands_item(fileid, self._path)
+        return self._load_item(fileid, self._path)
 
     def __len__(self) -> int:
         return len(self._walker)
+
+    def _load_item(filepath: str, path: str) -> Tuple[Tensor, int, str, str, int]:
+        relpath = os.path.relpath(filepath, path)
+        label, filename = os.path.split(relpath)
+        speaker, _ = os.path.splitext(filename)
+
+        speaker_id, utterance_number = speaker.split(HASH_DIVIDER)
+        utterance_number = int(utterance_number)
+
+        # Load audio
+        waveform, sample_rate = torchaudio.load(filepath)
+        return waveform, sample_rate, label, speaker_id, utterance_number
+
