@@ -7,13 +7,12 @@ from torch import Tensor
 from torchaudio.datasets.utils import (
     download_url,
     extract_archive,
-    walk_files
 )
 
 FOLDER_IN_ARCHIVE = "SpeechCommands"
 URL = "speech_commands_v0.02"
 HASH_DIVIDER = "_nohash_"
-EXCEPT_FOLDER = "_background_noise_"
+EXCEPT_FOLDER = ["_background_noise_"]
 _CHECKSUMS = {
     "https://storage.googleapis.com/download.tensorflow.org/data/speech_commands_v0.01.tar.gz":
     "3cd23799cb2bbdec517f1cc028f8d43c",
@@ -53,9 +52,30 @@ class SPEECHCOMMANDS(Dataset):
         if download:
             self._download()
 
-        walker = walk_files(self._path, suffix=".wav", prefix=True)
-        walker = filter(lambda w: HASH_DIVIDER in w and EXCEPT_FOLDER not in w, walker)
-        self._walker = list(walker)
+        self._walker = self._parse_files()
+
+    def _parse_files(self):
+        file_path = []
+
+        # Is the comprehension list readable enough?
+        list_commands = [
+            dir for dir in os.listdir(self._path)
+            if os.path.isdir(os.path.join(self._path, dir))
+            and dir not in EXCEPT_FOLDER
+        ]
+
+        for command in list_commands:
+            command_path = os.path.join(self._path, command)
+
+            list_files = [
+                os.path.join(command_path, f)
+                for f in os.listdir(command_path)
+                if f[-4:] == ".wav"
+            ]
+
+            file_path.extend(list_files)
+
+        return file_path
 
     def _download(self) -> None:
         """Download the dataset and extract the archive"""
@@ -101,3 +121,5 @@ class SPEECHCOMMANDS(Dataset):
         waveform, sample_rate = torchaudio.load(filepath)
         return waveform, sample_rate, label, speaker_id, utterance_number
 
+if __name__=="__main__":
+    sc = SPEECHCOMMANDS(root="/corpus/corpus/", download=True)
