@@ -63,6 +63,7 @@ class SPEECHCOMMANDS(Dataset):
             if os.path.isdir(os.path.join(self._path, dir))
             and dir not in EXCEPT_FOLDER
         ]
+        list_commands.sort()
 
         for command in list_commands:
             command_path = os.path.join(self._path, command)
@@ -72,6 +73,7 @@ class SPEECHCOMMANDS(Dataset):
                 for f in os.listdir(command_path)
                 if f[-4:] == ".wav"
             ]
+            list_files.sort()
 
             file_path.extend(list_files)
 
