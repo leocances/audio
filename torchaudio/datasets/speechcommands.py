@@ -109,7 +109,7 @@ class SPEECHCOMMANDS(Dataset):
     def __len__(self) -> int:
         return len(self._walker)
 
-    def _load_item(filepath: str, path: str) -> Tuple[Tensor, int, str, str, int]:
+    def _load_item(self, filepath: str, path: str) -> Tuple[Tensor, int, str, str, int]:
         relpath = os.path.relpath(filepath, path)
         label, filename = os.path.split(relpath)
         speaker, _ = os.path.splitext(filename)
@@ -120,6 +120,3 @@ class SPEECHCOMMANDS(Dataset):
         # Load audio
         waveform, sample_rate = torchaudio.load(filepath)
         return waveform, sample_rate, label, speaker_id, utterance_number
-
-if __name__=="__main__":
-    sc = SPEECHCOMMANDS(root="/corpus/corpus/", download=True)
