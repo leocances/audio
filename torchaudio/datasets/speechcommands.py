@@ -4,6 +4,7 @@ from typing import Tuple
 import torchaudio
 from torch.utils.data import Dataset
 from torch import Tensor
+from torch.nn import Module
 from torchaudio.datasets.utils import (
     download_url,
     extract_archive,
@@ -30,9 +31,10 @@ class SPEECHCOMMANDS(Dataset):
     def __init__(self,
                  root: str,
                  url: str = URL,
-                 download: bool = False) -> None:
+                 download: bool = False,
+                 transform: Module = None) -> None:
 
-        if url in ["speech_commands_v0.01", "speech_commands_v0.02" ]:
+        if url in ["speech_commands_v0.01", "speech_commands_v0.02"]:
             base_url = "https://storage.googleapis.com/download.tensorflow.org/data/"
             ext_archive = ".tar.gz"
 
@@ -40,6 +42,7 @@ class SPEECHCOMMANDS(Dataset):
 
         self.root = root
         self.url = url
+        self.transform = transform
 
         self.basename = os.path.basename(url)
 
@@ -53,6 +56,20 @@ class SPEECHCOMMANDS(Dataset):
             self._download()
 
         self._walker = self._parse_files()
+
+    def __getitem__(self, n: int) -> Tuple[Tensor, int, str, str, int]:
+        fileid = self._walker[n]
+
+        waveform, sr, label, speaker_id, utterance_number = self._load_item(fileid, self._path)
+
+        if self.transform is not None:
+            waveform = self.transform(waveform)
+            waveform = waveform.squeeze()
+
+        return waveform, sr, label, speaker_id, utterance_number
+
+    def __len__(self) -> int:
+        return len(self._walker)
 
     def _parse_files(self):
         file_path = []
@@ -87,9 +104,9 @@ class SPEECHCOMMANDS(Dataset):
             print("Dataset already download and verified")
 
         else:
-
             checksum = _CHECKSUMS.get(self.url, None)
-            download_url(self.url, self.root, hash_value=checksum, hash_type="md5")
+            download_url(self.url, self.root, hash_value=checksum,
+                         hash_type="md5")
             extract_archive(archive_path, self._path)
 
     def _check_integrity(self, path, checksum=None) -> bool:
@@ -104,14 +121,8 @@ class SPEECHCOMMANDS(Dataset):
         # TODO add checksum verification
         return True
 
-    def __getitem__(self, n: int) -> Tuple[Tensor, int, str, str, int]:
-        fileid = self._walker[n]
-        return self._load_item(fileid, self._path)
-
-    def __len__(self) -> int:
-        return len(self._walker)
-
-    def _load_item(self, filepath: str, path: str) -> Tuple[Tensor, int, str, str, int]:
+    def _load_item(self, filepath: str, path: str) -> Tuple[Tensor, int, str,
+                                                            str, int]:
         relpath = os.path.relpath(filepath, path)
         label, filename = os.path.split(relpath)
         speaker, _ = os.path.splitext(filename)
