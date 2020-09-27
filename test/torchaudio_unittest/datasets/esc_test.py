@@ -18,7 +18,6 @@ class TestESC(TempDirMixin, TorchaudioTestCase):
     data = []
     expected_targets = [0, 0, 38, 38, 40, 40, 41, 41, 10, 10]
 
-
     @classmethod
     def setUpClass(cls):
         cls.root_dir = cls.get_base_temp_dir()
@@ -31,7 +30,7 @@ class TestESC(TempDirMixin, TorchaudioTestCase):
         os.makedirs(meta_dir, exist_ok=True)
         cls.meta_file_path = os.path.join(meta_dir, "esc50.csv")
 
-        with open(cls.meta_file_path, 'w') as fp: 
+        with open(cls.meta_file_path, 'w') as fp:
             fp.write("filename,fold,target,category,esc10,src_file,take\n")
 
             # Add some file for esc10 and esc50. one for each dataset
@@ -47,14 +46,14 @@ class TestESC(TempDirMixin, TorchaudioTestCase):
             fp.write("8_.wav,1,10,rain,True,100009,A\n")
             fp.write("9_.wav,2,10,rain,False,100010,A\n")
 
-
         # Create the fake audio file and dir
         audio_dir = os.path.join(base_dir, "audio")
         os.makedirs(audio_dir, exist_ok=True)
 
         for i in range(10):
             path = os.path.join(audio_dir, "%d_.wav" % i)
-            data = get_whitenoise(sample_rate=44100, duration=5, n_channels=1, dtype='int16', seed=i)
+            data = get_whitenoise(sample_rate=44100, duration=5, n_channels=1,
+                                  dtype='int16', seed=i)
             save_wav(path, data, 44100)
             cls.data.append(normalize_wav(data))
 
@@ -62,15 +61,16 @@ class TestESC(TempDirMixin, TorchaudioTestCase):
         dataset = esc.ESC10(self.root_dir, folds=(1, 2))
 
         # esc10 targets are not linear and the dataset map them from 0 to 9
-        target_mapper = {0: 0, 1: 1, 2: 38, 3: 40, 4: 41, 5: 10, 6: 11, 7: 12, 8: 20, 9: 21}
-        
+        target_mapper = {0: 0, 1: 1, 2: 38, 3: 40, 4: 41, 5: 10, 6: 11, 7: 12,
+                         8: 20, 9: 21}
+
         nb_esc10_file = 5
         n_iteration = 0
 
         for i, (waveform, sample_rate, target) in enumerate(dataset):
             target = target_mapper[target]
-            expected_target = self.expected_targets[i*2]  
-            expected_data = self.data[i*2]
+            expected_target = self.expected_targets[i * 2]
+            expected_data = self.data[i * 2]
 
             self.assertEqual(expected_data, waveform, atol=5e-5, rtol=1e-8)
             assert sample_rate == 44100
